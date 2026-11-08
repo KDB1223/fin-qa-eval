@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fin-qa-eval"
+version = "0.1.0"
+description = "Offline Chinese-first eval set and grader for financial-report QA and information extraction."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "fin-qa-eval contributors" }]
+keywords = [
+    "finance",
+    "evaluation",
+    "question-answering",
+    "information-extraction",
+    "chinese",
+    "earnings",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = [
+    "jsonschema>=4.18,<5",
+    "PyYAML>=6,<7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+fin-qa-eval = "fin_qa_eval.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/KDB1223/fin-qa-eval"
+Repository = "https://github.com/KDB1223/fin-qa-eval"
+Documentation = "https://github.com/KDB1223/fin-qa-eval/blob/main/docs/lab-zh.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KDB1223/fin-qa-eval/data/schema/eval_item.schema.json",
+  "title": "FinQAEvalItem",
+  "description": "One synthetic financial-report QA item. Companies and figures are fictional.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "company",
+    "ticker",
+    "report_period",
+    "metric",
+    "convention",
+    "unit",
+    "question",
+    "source_id",
+    "source_text",
+    "evidence_span",
+    "reference",
+    "synthetic",
+    "language",
+    "tags"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "company": { "type": "string", "minLength": 1 },
+    "ticker": { "type": "string", "pattern": "^[A-Z]{2,6}$" },
+    "report_period": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}(FY|H1|H2|Q[1-4])$",
+      "description": "Fiscal label: 2024FY, 2024H1, 2024Q3."
+    },
+    "metric": {
+      "enum": [
+        "revenue",
+        "net_profit",
+        "operating_cashflow",
+        "revenue_yoy",
+        "net_profit_yoy",
+        "operating_cashflow_yoy"
+      ]
+    },
+    "convention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "basis", "profit_view", "tax"],
+      "properties": {
+        "scope": {
+          "enum": ["consolidated", "parent"],
+          "description": "合并口径 vs 母公司口径."
+        },
+        "basis": {
+          "enum": ["gaap", "non_gaap"],
+          "description": "会计准则口径 vs 扣非 / non-GAAP."
+        },
+        "profit_view": {
+          "anyOf": [
+            { "enum": ["attributable", "net", "operating"] },
+            { "type": "null" }
+          ]
+        },
+        "tax": {
+          "anyOf": [
+            { "enum": ["ex_tax", "inc_tax"] },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "unit": {
+      "description": "Unit the question asks the answer to be expressed in.",
+      "enum": [
+        "CNY",
+        "CNY_thousand",
+        "CNY_ten_thousand",
+        "CNY_million",
+        "CNY_hundred_million",
+        "percent"
+      ]
+    },
+    "question": { "type": "string", "minLength": 4 },
+    "source_id": { "type": "string", "minLength": 1 },
+    "source_text": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Synthetic snippet. Must contain evidence_span when the item is answerable."
+    },
+    "evidence_span": {
+      "type": "string",
+      "description": "Exact supporting substring. Empty only when the item is unanswerable and no supporting clause exists."
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answerable", "value", "unit", "display", "refusal_reason"],
+      "properties": {
+        "answerable": { "type": "boolean" },
+        "value": { "type": ["number", "null"] },
+        "unit": {
+          "anyOf": [
+            {
+              "enum": [
+                "CNY",
+                "CNY_thousand",
+                "CNY_ten_thousand",
+                "CNY_million",
+                "CNY_hundred_million",
+                "percent"
+              ]
+            },
+            { "type": "null" }
+          ]
+        },
+        "display": { "type": "string", "minLength": 1 },
+        "refusal_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "insufficient_evidence",
+                "unit_ambiguous",
+                "convention_conflict",
+                "out_of_scope"
+              ]
+            },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "distractors": {
+      "type": "array",
+      "description": "Nearby figures that share digits with a different 口径. Used to measure convention mix-ups.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["span", "reason", "value", "unit"],
+        "properties": {
+          "span": { "type": "string", "minLength": 1 },
+          "reason": {
+            "enum": [
+              "parent_scope",
+              "consolidated_scope",
+              "tax_inclusive",
+              "non_attributable",
+              "overseas_only",
+              "prior_period",
+              "absolute_change",
+              "wrong_unit_scale"
+            ]
+          },
+          "value": { "type": "number" },
+          "unit": {
+            "enum": [
+              "CNY",
+              "CNY_thousand",
+              "CNY_ten_thousand",
+              "CNY_million",
+              "CNY_hundred_million",
+              "percent"
+            ]
+          }
+        }
+      }
+    },
+    "requires_calculation": {
+      "type": "boolean",
+      "description": "True when the reference is derived (typically YoY) rather than copied from a printed percent."
+    },
+    "synthetic": {
+      "const": true,
+      "description": "Must be true. This dataset does not contain real filings."
+    },
+    "language": { "enum": ["zh", "en", "bilingual"] },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "notes": { "type": "string" }
+  }
+}
