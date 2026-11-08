@@ -1,0 +1,123 @@
+# Field conventions (口径) for fin-qa-eval.
+# 本文件定义指标、口径和单位。样本公司与数字均为虚构。
+version: 1
+synthetic_only: true
+
+metrics:
+  revenue:
+    zh: 营业收入
+    en: revenue
+    default_convention:
+      scope: consolidated
+      basis: gaap
+      tax: ex_tax
+      profit_view: null
+    notes: 默认不含税、合并口径。含税销售额必须另标 tax=inc_tax，不能混进营业收入。
+  net_profit:
+    zh: 净利润
+    en: net profit
+    default_convention:
+      scope: consolidated
+      basis: gaap
+      profit_view: attributable
+      tax: null
+    notes: 未加说明时指归属于上市公司股东的净利润，不是扣非，也不是营业利润。
+  operating_cashflow:
+    zh: 经营活动现金流量净额
+    en: net cash from operating activities
+    default_convention:
+      scope: consolidated
+      basis: gaap
+      profit_view: null
+      tax: null
+    notes: 净额可以为负。负号是答案的一部分。
+  revenue_yoy:
+    zh: 营业收入同比
+    en: revenue year-over-year
+    unit: percent
+  net_profit_yoy:
+    zh: 净利润同比
+    en: net profit year-over-year
+    unit: percent
+  operating_cashflow_yoy:
+    zh: 经营现金流同比
+    en: operating cash flow year-over-year
+    unit: percent
+
+conventions:
+  scope:
+    consolidated:
+      zh: 合并口径
+      aliases: [合并, 集团, consolidated]
+    parent:
+      zh: 母公司口径
+      aliases: [母公司, 单体, parent]
+  basis:
+    gaap:
+      zh: 会计准则口径
+      aliases: [GAAP, 法定]
+    non_gaap:
+      zh: 扣非 / 非公认会计准则
+      aliases: [扣非, 扣除非经常性损益, non-GAAP]
+  profit_view:
+    attributable:
+      zh: 归属于上市公司股东的净利润
+      aliases: [归母净利润, 归母]
+    net:
+      zh: 净利润（未指明归母）
+    operating:
+      zh: 营业利润
+  tax:
+    ex_tax:
+      zh: 不含税
+    inc_tax:
+      zh: 含税
+
+units:
+  CNY:
+    zh: 元
+    to_cny: 1
+  CNY_thousand:
+    zh: 千元
+    to_cny: 1000
+  CNY_ten_thousand:
+    zh: 万元
+    to_cny: 10000
+  CNY_million:
+    zh: 百万元
+    to_cny: 1000000
+  CNY_hundred_million:
+    zh: 亿元
+    to_cny: 100000000
+  percent:
+    zh: 百分比
+    notes: 12.5 表示 +12.5%，不是 0.125。下降记为负数。
+
+rounding:
+  yoy_percent_decimals: 2
+  tie_break: half_up
+  yoy_formula: "(current - prior) / prior * 100"
+  yoy_evidence_order: current_then_prior
+  yoy_undefined_when:
+    - prior_base_not_positive
+    - current_amount_negative
+
+refusal_reasons:
+  insufficient_evidence: 片段未披露该指标，或只披露了另一种口径。
+  unit_ambiguous: 出现了数字，但单位不能唯一确定。
+  convention_conflict: 口径冲突，或同比基数不满足定义（比较期≤0 时不计算百分比）。
+  out_of_scope: 问题超出片段覆盖的期间或主体。
+
+grading:
+  dimensions:
+    - numeric_accuracy
+    - evidence_consistency
+    - refusal_appropriateness
+  money_relative_tolerance: 0.001
+  money_absolute_tolerance_cny: 1
+  percent_absolute_tolerance_pp: 0.05
+  weights:
+    numeric_accuracy: 1
+    evidence_consistency: 1
+    refusal_appropriateness: 1
+  notes: 综合分是三个维度的算术平均。错误标签用于归因，不单独加减分。
