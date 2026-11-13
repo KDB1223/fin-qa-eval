@@ -32,6 +32,13 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `qc` | 再加上重复题、缺字段、证据不在原文、单位把亿元标成万元 |
 | `grade` | 对预测 JSONL 打三维分 |
 | `report` | 按公司 / 报告期 / 指标 / 错误类型写 Markdown，并给数据和提示词清单 |
+| `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
+
+```bash
+python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
+```
+
+`compare` 用同一套离线评分比较两份预测，输出分数差、提升或退步的题目，以及主错误从哪类变成哪类。上面这条是自己比自己，分数差为 0。
 
 ## 示例记分板
 
@@ -139,7 +146,8 @@ src/fin_qa_eval/
   qc.py               重复、缺失、证据、单位异常
   graders.py          三个评分维度
   report.py           归因表和改进清单
-  cli.py              validate / qc / grade / report
+  compare.py          两份预测的分数差和主错误变化
+  cli.py              validate / qc / grade / report / compare
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。

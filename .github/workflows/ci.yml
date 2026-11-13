@@ -27,6 +27,8 @@ jobs:
           fin-qa-eval qc
       - name: Grade the fixture predictions
         run: fin-qa-eval grade --pred examples/predictions.jsonl
+      - name: Compare the fixture predictions to themselves
+        run: fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl --fail-on-regression
       - name: Planted bad samples must fail QC
         run: |
           set +e
