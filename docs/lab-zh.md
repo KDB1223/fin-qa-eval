@@ -91,9 +91,10 @@ fin-qa-eval qc --data data/fixtures/bad_samples.jsonl
 ```bash
 fin-qa-eval grade --pred examples/my_predictions.jsonl
 fin-qa-eval report --pred examples/my_predictions.jsonl --out examples/my_report.md
+fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/my_predictions.jsonl
 ```
 
-写出改分前后的综合分。综合分应高于 fixture 的 0.8421。说明你没有靠修改金标来提分。
+写出改分前后的综合分。综合分应高于 fixture 的 0.8421。`compare` 会列出提升和退步的题目，不用对照两次 grade 或 report。说明你没有靠修改金标来提分。
 
 ## 任务 E — 写一段提示词
 

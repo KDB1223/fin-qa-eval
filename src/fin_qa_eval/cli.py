@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, and report."""
+"""Command line for validate, qc, grade, report, and compare."""
 
 from __future__ import annotations
 
@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
 from fin_qa_eval import __version__
+from fin_qa_eval.compare import (
+    compare_grades,
+    is_regression,
+    render_compare_markdown,
+    render_compare_text,
+)
 from fin_qa_eval.graders import grade
 from fin_qa_eval.loader import LoadError, load_jsonl
 from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
@@ -23,7 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Offline eval toolkit for Chinese financial-report QA. "
             "Validates the task schema, runs quality checks, and grades "
-            "predictions on numeric accuracy, evidence consistency, and refusal."
+            "predictions on numeric accuracy, evidence consistency, and refusal. "
+            "compare diffs two prediction files on the same gold set."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -72,6 +79,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="Markdown output path (default: stdout)",
     )
     report.set_defaults(func=cmd_report)
+
+    compare = sub.add_parser(
+        "compare",
+        help="Compare two prediction JSONL files against the same gold set",
+    )
+    _add_data_args(compare, default_data=None)
+    compare.add_argument(
+        "--pred-a",
+        type=Path,
+        required=True,
+        help="Baseline prediction JSONL",
+    )
+    compare.add_argument(
+        "--pred-b",
+        type=Path,
+        required=True,
+        help="Candidate prediction JSONL",
+    )
+    compare.add_argument("--format", choices=("text", "json"), default="text")
+    compare.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Write a Markdown comparison report to this path",
+    )
+    compare.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help="Exit 1 if candidate overall drops or any item overall decreases",
+    )
+    compare.set_defaults(func=cmd_compare)
     return parser
 
 
@@ -200,6 +238,35 @@ def cmd_report(args: argparse.Namespace, stdout: TextIO) -> int:
         print(f"wrote {args.out}", file=stdout)
     else:
         stdout.write(text)
+    return 0
+
+
+def cmd_compare(args: argparse.Namespace, stdout: TextIO) -> int:
+    data_file = _gold(args)
+    pred_a = args.pred_a
+    pred_b = args.pred_b
+    gold_items = load_jsonl(data_file)
+    graded_a = grade(gold_items, load_jsonl(pred_a))
+    graded_b = grade(gold_items, load_jsonl(pred_b))
+    report = compare_grades(
+        graded_a,
+        graded_b,
+        gold_name=_display_path(data_file),
+        pred_a_name=_display_path(pred_a),
+        pred_b_name=_display_path(pred_b),
+    )
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(render_compare_markdown(report), encoding="utf-8")
+    if args.format == "json":
+        json.dump(report, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_compare_text(report))
+    if args.out:
+        print(f"wrote {args.out}", file=stdout)
+    if args.fail_on_regression and is_regression(report):
+        return 1
     return 0
 
 

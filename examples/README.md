@@ -20,6 +20,9 @@ Regenerate the scoreboard from the repo root:
 ```bash
 fin-qa-eval grade --pred examples/predictions.jsonl
 fin-qa-eval report --pred examples/predictions.jsonl --out examples/scoreboard.md
+fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
 ```
+
+`compare` reports score deltas and primary-error changes. The command above compares the fixture to itself, so the deltas are zero.
 
 `quickstart.sh` installs the package and runs validate, qc, grade, and report.

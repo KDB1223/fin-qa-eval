@@ -130,10 +130,14 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval qc` | Schema and semantic checks hold | Duplicates, missing fields, bad evidence, unit anomalies, non-synthetic rows |
 | `fin-qa-eval grade --pred FILE` | File graded | Only with `--fail-under X` when overall &lt; X |
 | `fin-qa-eval report --pred FILE --out report.md` | Markdown written | — |
+| `fin-qa-eval compare --pred-a A --pred-b B` | Both files graded | With `--fail-on-regression`, candidate overall is lower or any item overall decreases |
+
+`compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved.
 
 ```bash
 fin-qa-eval qc --data data/fixtures/bad_samples.jsonl   # expected exit 1
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
+fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
 ```
 
 `data/fixtures/bad_samples.jsonl` plants duplicate ids, duplicate questions, a missing field, an evidence span that is not in the snippet, a 亿元 figure stored as 万元, an unanswerable row that still has a number, a distractor equal to the gold value, and a row with `synthetic: false`.
@@ -154,7 +158,8 @@ src/fin_qa_eval/
   qc.py         duplicates, missing fields, evidence, unit anomalies
   graders.py    numeric_accuracy, evidence_consistency, refusal_appropriateness
   report.py     company / period / metric / error tables + data & prompt checklist
-  cli.py        validate, qc, grade, report
+  compare.py    score deltas and primary-error changes between two prediction files
+  cli.py        validate, qc, grade, report, compare
 ```
 
 The report’s checklist is driven by the error tags actually present, split into data fixes and prompt fixes. It is a short list, not a second model.
