@@ -25,6 +25,8 @@ jobs:
         run: |
           fin-qa-eval validate
           fin-qa-eval qc
+      - name: Inventory the shipped eval set
+        run: fin-qa-eval stats
       - name: Grade the fixture predictions
         run: fin-qa-eval grade --pred examples/predictions.jsonl
       - name: Compare the fixture predictions to themselves

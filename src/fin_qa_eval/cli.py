@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, and compare."""
+"""Command line for validate, qc, grade, report, compare, and stats."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
 from fin_qa_eval.qc import run_qc
 from fin_qa_eval.report import format_score, qc_status_line, render_grade_report, render_qc_report
 from fin_qa_eval.schema import SchemaLoadError, load_schema
+from fin_qa_eval.stats import collect_stats, render_stats_text
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,7 +31,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Offline eval toolkit for Chinese financial-report QA. "
             "Validates the task schema, runs quality checks, and grades "
             "predictions on numeric accuracy, evidence consistency, and refusal. "
-            "compare diffs two prediction files on the same gold set."
+            "compare diffs two prediction files on the same gold set. "
+            "stats inventories gold-set coverage without grading."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -110,6 +112,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit 1 if candidate overall drops or any item overall decreases",
     )
     compare.set_defaults(func=cmd_compare)
+
+    stats_cmd = sub.add_parser(
+        "stats",
+        help="Inventory gold-set coverage (companies, 口径, refusals)",
+    )
+    _add_data_args(stats_cmd, default_data=None)
+    stats_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    stats_cmd.set_defaults(func=cmd_stats)
     return parser
 
 
@@ -267,6 +277,19 @@ def cmd_compare(args: argparse.Namespace, stdout: TextIO) -> int:
         print(f"wrote {args.out}", file=stdout)
     if args.fail_on_regression and is_regression(report):
         return 1
+    return 0
+
+
+def cmd_stats(args: argparse.Namespace, stdout: TextIO) -> int:
+    """Count gold-set coverage. ``--schema`` is accepted and not loaded."""
+
+    data_file = _gold(args)
+    payload = {"data": _display_path(data_file), **collect_stats(load_jsonl(data_file))}
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_stats_text(payload))
     return 0
 
 

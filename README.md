@@ -26,7 +26,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 
 `fin-qa-eval` is the same console script once it is on `PATH`. `examples/quickstart.sh` runs the same steps and checks that the planted bad file exits 1.
 
-`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `grade` / `report` score a prediction JSONL. Grading does not call a model.
+`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `stats` inventories gold-set coverage. `grade` / `report` score a prediction JSONL. Grading does not call a model.
 
 ## Fixture scoreboard
 
@@ -131,10 +131,12 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval grade --pred FILE` | File graded | Only with `--fail-under X` when overall &lt; X |
 | `fin-qa-eval report --pred FILE --out report.md` | Markdown written | — |
 | `fin-qa-eval compare --pred-a A --pred-b B` | Both files graded | With `--fail-on-regression`, candidate overall is lower or any item overall decreases |
+| `fin-qa-eval stats` | Eval file loaded | — |
 
-`compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved.
+`compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
 
 ```bash
+fin-qa-eval stats
 fin-qa-eval qc --data data/fixtures/bad_samples.jsonl   # expected exit 1
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
 fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
@@ -159,14 +161,15 @@ src/fin_qa_eval/
   graders.py    numeric_accuracy, evidence_consistency, refusal_appropriateness
   report.py     company / period / metric / error tables + data & prompt checklist
   compare.py    score deltas and primary-error changes between two prediction files
-  cli.py        validate, qc, grade, report, compare
+  stats.py      gold-set coverage: companies, 口径, refusal boundaries
+  cli.py        validate, qc, grade, report, compare, stats
 ```
 
 The report’s checklist is driven by the error tags actually present, split into data fixes and prompt fixes. It is a short list, not a second model.
 
 ## Tests
 
-GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `grade`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
+GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `stats`, and `grade`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
 
 ```bash
 pytest

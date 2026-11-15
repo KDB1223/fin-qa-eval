@@ -33,12 +33,19 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `grade` | 对预测 JSONL 打三维分 |
 | `report` | 按公司 / 报告期 / 指标 / 错误类型写 Markdown，并给数据和提示词清单 |
 | `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
+| `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
 
 ```bash
 python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
 ```
 
 `compare` 用同一套离线评分比较两份预测，输出分数差、提升或退步的题目，以及主错误从哪类变成哪类。上面这条是自己比自己，分数差为 0。
+
+`stats` 是金标的覆盖清单，不是打分：公司、指标、期间、单位、口径（`scope`、`basis`、`profit_view`、`tax`）、语言和拒答原因。它不读预测文件。
+
+```bash
+python3 -m fin_qa_eval stats
+```
 
 ## 示例记分板
 
@@ -147,14 +154,15 @@ src/fin_qa_eval/
   graders.py          三个评分维度
   report.py           归因表和改进清单
   compare.py          两份预测的分数差和主错误变化
-  cli.py              validate / qc / grade / report / compare
+  stats.py            金标覆盖：公司、口径、拒答边界
+  cli.py              validate / qc / grade / report / compare / stats
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。
 
 ## 测试
 
-GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`grade`，并检查坏样本的退出码是 1。CI 不需要密钥。
+GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`stats`、`grade`，并检查坏样本的退出码是 1。CI 不需要密钥。
 
 ```bash
 pytest
