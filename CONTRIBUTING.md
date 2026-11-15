@@ -10,6 +10,8 @@ pytest
 fin-qa-eval validate && fin-qa-eval qc
 ```
 
+`fin-qa-eval stats` prints gold-set coverage (companies, metrics, 口径, refusal reasons) without grading.
+
 ## Add an eval item
 
 1. Edit the catalog in `data/materialize.py`. Companies and numbers must be invented. Start the snippet with `【虚构示例，非真实披露】` and keep `synthetic: true`.

@@ -1,3 +1,6 @@
+import io
+import json
+
 from fin_qa_eval.cli import main
 
 
@@ -40,3 +43,16 @@ def test_validate_qc_grade_and_report(tmp_path, gold_path, bad_path, pred_path) 
     assert "综合 overall" in text
     assert "按公司" in text
     assert "按错误类型" in text
+
+
+def test_stats_command(gold_path) -> None:
+    buf = io.StringIO()
+    assert main(["stats", "--data", str(gold_path)], stdout=buf) == 0
+    text = buf.getvalue()
+    assert "items=38" in text
+    assert "by_scope" in text
+
+    buf = io.StringIO()
+    assert main(["stats", "--data", str(gold_path), "--format", "json"], stdout=buf) == 0
+    payload = json.loads(buf.getvalue())
+    assert payload["n"] == 38
