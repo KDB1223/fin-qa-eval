@@ -31,7 +31,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `validate` | 只做 JSON Schema |
 | `qc` | 再加上重复题、缺字段、证据不在原文、单位把亿元标成万元 |
 | `grade` | 对预测 JSONL 打三维分 |
-| `report` | 按公司 / 报告期 / 指标 / 错误类型写 Markdown，并给数据和提示词清单 |
+| `report` | 按公司 / 报告期 / 指标 / 口径 / 单位 / 错误类型写 Markdown，并给数据和提示词清单 |
 | `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
 | `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
 
@@ -41,7 +41,7 @@ python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b exam
 
 `compare` 用同一套离线评分比较两份预测，输出分数差、提升或退步的题目，以及主错误从哪类变成哪类。上面这条是自己比自己，分数差为 0。
 
-`stats` 是金标的覆盖清单，不是打分：公司、指标、期间、单位、口径（`scope`、`basis`、`profit_view`、`tax`）、语言和拒答原因。它不读预测文件。
+`grade --format json` 和 `report` 在公司、报告期、指标之外，再按口径（`scope`、`basis`、`profit_view`、`tax`）和单位汇总分数。`stats` 是金标的覆盖清单，不是打分：公司、指标、期间、单位、口径（`scope`、`basis`、`profit_view`、`tax`）、语言和拒答原因。它不读预测文件。
 
 ```bash
 python3 -m fin_qa_eval stats
@@ -151,8 +151,8 @@ src/fin_qa_eval/
   units.py            解析亿元、万元、百分比，换算并标记数量级/符号错误
   schema.py           读 Schema
   qc.py               重复、缺失、证据、单位异常
-  graders.py          三个评分维度
-  report.py           归因表和改进清单
+  graders.py          三个评分维度，并按口径和单位汇总
+  report.py           公司 / 期间 / 指标 / 口径 / 单位归因表和改进清单
   compare.py          两份预测的分数差和主错误变化
   stats.py            金标覆盖：公司、口径、拒答边界
   cli.py              validate / qc / grade / report / compare / stats

@@ -133,7 +133,7 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval compare --pred-a A --pred-b B` | Both files graded | With `--fail-on-regression`, candidate overall is lower or any item overall decreases |
 | `fin-qa-eval stats` | Eval file loaded | — |
 
-`compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
+`grade --format json` and `report` roll scores up by company, period, and metric, and also by 口径 (`scope`, `basis`, `profit_view`, `tax`) and unit. `compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
 
 ```bash
 fin-qa-eval stats
@@ -158,8 +158,8 @@ src/fin_qa_eval/
   units.py      parse 亿元/万元/% ; normalize; label scale and sign errors
   schema.py     JSON Schema + conventions YAML
   qc.py         duplicates, missing fields, evidence, unit anomalies
-  graders.py    numeric_accuracy, evidence_consistency, refusal_appropriateness
-  report.py     company / period / metric / error tables + data & prompt checklist
+  graders.py    numeric_accuracy, evidence_consistency, refusal_appropriateness; 口径 and unit rollups
+  report.py     company / period / metric / 口径 / unit / error tables + data & prompt checklist
   compare.py    score deltas and primary-error changes between two prediction files
   stats.py      gold-set coverage: companies, 口径, refusal boundaries
   cli.py        validate, qc, grade, report, compare, stats

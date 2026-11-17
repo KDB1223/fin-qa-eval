@@ -43,6 +43,40 @@ def test_validate_qc_grade_and_report(tmp_path, gold_path, bad_path, pred_path) 
     assert "综合 overall" in text
     assert "按公司" in text
     assert "按错误类型" in text
+    metric_at = text.index("## 按指标 / By metric")
+    error_at = text.index("## 按错误类型 / By error type")
+    for heading in (
+        "## 按口径范围 / By scope",
+        "## 按会计基础 / By basis",
+        "## 按利润视角 / By profit view",
+        "## 按含税口径 / By tax",
+        "## 按单位 / By unit",
+    ):
+        assert metric_at < text.index(heading) < error_at
+
+    buf = io.StringIO()
+    assert (
+        main(
+            [
+                "grade",
+                "--data",
+                str(gold_path),
+                "--pred",
+                str(pred_path),
+                "--format",
+                "json",
+            ],
+            stdout=buf,
+        )
+        == 0
+    )
+    payload = json.loads(buf.getvalue())
+    assert {"consolidated", "parent"} <= set(payload["summary"]["by_scope"])
+    assert "(none)" in payload["summary"]["by_profit_view"]
+    by_id = {item["id"]: item for item in payload["items"]}
+    assert by_id["xlkj-2024q3-revenue"]["scope"] == "consolidated"
+    assert by_id["xlkj-2024q3-revenue"]["profit_view"] == "(none)"
+    assert by_id["xlkj-2024q3-revenue"]["unit"] == "CNY_hundred_million"
 
 
 def test_stats_command(gold_path) -> None:

@@ -50,6 +50,10 @@ DIMENSIONS = (
     "refusal_appropriateness",
 )
 
+# Null and missing convention fields or units share this bucket. str(None)
+# would be the label "None", which is not a 口径 value.
+_MISSING = "(none)"
+
 
 @dataclass
 class ItemResult:
@@ -65,6 +69,11 @@ class ItemResult:
     overall: float
     errors: list[str] = field(default_factory=list)
     primary_error: Optional[str] = None
+    scope: str = _MISSING
+    basis: str = _MISSING
+    profit_view: str = _MISSING
+    tax: str = _MISSING
+    unit: str = _MISSING
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -74,6 +83,11 @@ class ItemResult:
             "metric": self.metric,
             "language": self.language,
             "answerable": self.answerable,
+            "scope": self.scope,
+            "basis": self.basis,
+            "profit_view": self.profit_view,
+            "tax": self.tax,
+            "unit": self.unit,
             "numeric_accuracy": self.numeric_accuracy,
             "evidence_consistency": self.evidence_consistency,
             "refusal_appropriateness": self.refusal_appropriateness,
@@ -163,20 +177,16 @@ def resolve_prediction_amount(prediction: dict[str, Any]) -> Optional[ParsedAmou
 
 
 def summarize(results: list[ItemResult]) -> dict[str, Any]:
-    if not results:
-        return {
-            "n": 0,
-            "n_full_credit": 0,
-            "numeric_accuracy": 0.0,
-            "evidence_consistency": 0.0,
-            "refusal_appropriateness": 0.0,
-            "overall": 0.0,
-            "by_metric": {},
-            "by_company": {},
-            "by_period": {},
-            "by_error": {},
-        }
-    summary = {
+    """Mean scores plus the same rollup row for each slice.
+
+    ``by_scope``, ``by_basis``, ``by_profit_view``, ``by_tax``, and
+    ``by_unit`` match ``by_company``: ``n``, ``overall``, the three dimension
+    means, ``n_full_credit``, and ``top_error``, with keys sorted
+    alphabetically. A null or missing convention field or unit is the
+    ``(none)`` bucket. An empty result list still includes every group key.
+    """
+
+    return {
         "n": len(results),
         "n_full_credit": sum(1 for row in results if row.overall == 1.0),
         "numeric_accuracy": _mean(row.numeric_accuracy for row in results),
@@ -186,9 +196,13 @@ def summarize(results: list[ItemResult]) -> dict[str, Any]:
         "by_metric": _group(results, lambda row: row.metric),
         "by_company": _group(results, lambda row: row.company),
         "by_period": _group(results, lambda row: row.report_period),
+        "by_scope": _group(results, lambda row: row.scope),
+        "by_basis": _group(results, lambda row: row.basis),
+        "by_profit_view": _group(results, lambda row: row.profit_view),
+        "by_tax": _group(results, lambda row: row.tax),
+        "by_unit": _group(results, lambda row: row.unit),
         "by_error": dict(_error_counts(results)),
     }
-    return summary
 
 
 def _score_numeric(
@@ -289,7 +303,31 @@ def _result(
         overall=(numeric + evidence + refusal) / 3,
         errors=errors,
         primary_error=_primary(errors),
+        scope=_convention_label(gold, "scope"),
+        basis=_convention_label(gold, "basis"),
+        profit_view=_convention_label(gold, "profit_view"),
+        tax=_convention_label(gold, "tax"),
+        unit=_bucket_label(gold.get("unit")),
     )
+
+
+def _convention_label(gold: dict[str, Any], name: str) -> str:
+    """Read one ``convention`` field. A missing object or null is ``(none)``."""
+
+    convention = gold.get("convention")
+    if not isinstance(convention, dict):
+        return _MISSING
+    return _bucket_label(convention.get(name))
+
+
+def _bucket_label(value: Any) -> str:
+    """Group key for a convention field or unit. Null stays ``(none)``."""
+
+    if value is None:
+        return _MISSING
+    if isinstance(value, str):
+        return value
+    return str(value)
 
 
 def _primary(errors: list[str]) -> Optional[str]:
