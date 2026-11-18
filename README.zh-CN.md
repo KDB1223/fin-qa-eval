@@ -32,6 +32,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `qc` | 再加上重复题、缺字段、证据不在原文、单位把亿元标成万元 |
 | `grade` | 对预测 JSONL 打三维分 |
 | `report` | 按公司 / 报告期 / 指标 / 口径 / 单位 / 错误类型写 Markdown，并给数据和提示词清单 |
+| `failures` | 列出未满分的题目，带上金标和预测的数值、单位与原始答案 |
 | `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
 | `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
 
@@ -43,8 +44,12 @@ python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b exam
 
 `grade --format json` 和 `report` 在公司、报告期、指标之外，再按口径（`scope`、`basis`、`profit_view`、`tax`）和单位汇总分数。`stats` 是金标的覆盖清单，不是打分：公司、指标、期间、单位、口径（`scope`、`basis`、`profit_view`、`tax`）、语言和拒答原因。它不读预测文件。
 
+`failures` 列出综合分不到 1 的题目，并接上金标参考答案和实际参与评分的预测（数值、单位、原始答案）。半分也算错例。它是清单，不是门禁：有错例也退出 0。`--fail-under` 仍在 `grade` 上。读文件失败仍退出 2。`--error`、`--company`、`--id` 同时给出时取交集；筛完没有题目也退出 0，并打印 `no failures`。`--format json` 只输出汇总计数和错例，不倒出满分题。
+
 ```bash
 python3 -m fin_qa_eval stats
+python3 -m fin_qa_eval failures --pred examples/predictions.jsonl
+python3 -m fin_qa_eval failures --pred examples/predictions.jsonl --error convention_mismatch
 ```
 
 ## 示例记分板
@@ -153,16 +158,17 @@ src/fin_qa_eval/
   qc.py               重复、缺失、证据、单位异常
   graders.py          三个评分维度，并按口径和单位汇总
   report.py           公司 / 期间 / 指标 / 口径 / 单位归因表和改进清单
+  failures.py         未满分题目，带金标和预测值
   compare.py          两份预测的分数差和主错误变化
   stats.py            金标覆盖：公司、口径、拒答边界
-  cli.py              validate / qc / grade / report / compare / stats
+  cli.py              validate / qc / grade / report / failures / compare / stats
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。
 
 ## 测试
 
-GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`stats`、`grade`，并检查坏样本的退出码是 1。CI 不需要密钥。
+GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`stats`、`grade`、`failures`，并检查坏样本的退出码是 1。CI 不需要密钥。
 
 ```bash
 pytest
