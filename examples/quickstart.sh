@@ -7,6 +7,7 @@ PYTHON="${PYTHON:-python3}"
 "$PYTHON" -m fin_qa_eval validate
 "$PYTHON" -m fin_qa_eval qc
 "$PYTHON" -m fin_qa_eval grade --pred examples/predictions.jsonl
+"$PYTHON" -m fin_qa_eval failures --pred examples/predictions.jsonl
 "$PYTHON" -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/scoreboard.md
 echo
 echo "Planted bad samples are expected to fail QC (exit 1):"

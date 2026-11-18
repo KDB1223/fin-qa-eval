@@ -130,15 +130,20 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval qc` | Schema and semantic checks hold | Duplicates, missing fields, bad evidence, unit anomalies, non-synthetic rows |
 | `fin-qa-eval grade --pred FILE` | File graded | Only with `--fail-under X` when overall &lt; X |
 | `fin-qa-eval report --pred FILE --out report.md` | Markdown written | — |
+| `fin-qa-eval failures --pred FILE` | Inventory printed | — |
 | `fin-qa-eval compare --pred-a A --pred-b B` | Both files graded | With `--fail-on-regression`, candidate overall is lower or any item overall decreases |
 | `fin-qa-eval stats` | Eval file loaded | — |
 
 `grade --format json` and `report` roll scores up by company, period, and metric, and also by 口径 (`scope`, `basis`, `profit_view`, `tax`) and unit. `compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
 
+`failures` lists items with overall below 1, joined to the gold reference and the prediction that was graded (value, unit, and raw answer). Partial credit counts. It is an inventory, not a gate: exit 0 even when there are misses. `--fail-under` stays on `grade`. A load error still exits 2. Filters `--error`, `--company`, and `--id` are ANDed; a filter that matches nothing still exits 0 and prints `no failures`. `--format json` prints summary counts and the failure objects only.
+
 ```bash
 fin-qa-eval stats
 fin-qa-eval qc --data data/fixtures/bad_samples.jsonl   # expected exit 1
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
+fin-qa-eval failures --pred examples/predictions.jsonl
+fin-qa-eval failures --pred examples/predictions.jsonl --error convention_mismatch
 fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
 ```
 
@@ -160,16 +165,17 @@ src/fin_qa_eval/
   qc.py         duplicates, missing fields, evidence, unit anomalies
   graders.py    numeric_accuracy, evidence_consistency, refusal_appropriateness; 口径 and unit rollups
   report.py     company / period / metric / 口径 / unit / error tables + data & prompt checklist
+  failures.py   items that missed full credit, with gold and predicted values
   compare.py    score deltas and primary-error changes between two prediction files
   stats.py      gold-set coverage: companies, 口径, refusal boundaries
-  cli.py        validate, qc, grade, report, compare, stats
+  cli.py        validate, qc, grade, report, failures, compare, stats
 ```
 
 The report’s checklist is driven by the error tags actually present, split into data fixes and prompt fixes. It is a short list, not a second model.
 
 ## Tests
 
-GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `stats`, and `grade`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
+GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `stats`, `grade`, and `failures`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
 
 ```bash
 pytest

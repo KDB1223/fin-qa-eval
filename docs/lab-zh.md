@@ -33,7 +33,7 @@ fin-qa-eval grade --pred examples/predictions.jsonl
 fin-qa-eval report --pred examples/predictions.jsonl --out examples/scoreboard.md
 ```
 
-`validate` 只看 JSON Schema。`qc` 额外检查重复、证据是否真的在片段里、单位是否把“18.3亿元”标成了“18.3万元”。`data/fixtures/bad_samples.jsonl` 是故意写坏的，`qc` 应该以退出码 1 结束。`stats` 在打分前清点金标覆盖：公司、指标、期间、单位、口径（scope、basis、profit_view、tax）和拒答原因。它只读评测集，不打分。
+`validate` 只看 JSON Schema。`qc` 额外检查重复、证据是否真的在片段里、单位是否把“18.3亿元”标成了“18.3万元”。`data/fixtures/bad_samples.jsonl` 是故意写坏的，`qc` 应该以退出码 1 结束。`stats` 在打分前清点金标覆盖：公司、指标、期间、单位、口径（scope、basis、profit_view、tax）和拒答原因。它只读评测集，不打分。`failures` 列出未满分的错例，并写出金标值和预测值（例如合并 128.6 对母公司 86.2），比报告里的短表更细。有错例时它仍退出 0。
 
 ## 任务 A — 读一条样本
 
@@ -70,7 +70,13 @@ fin-qa-eval qc --data data/fixtures/bad_samples.jsonl
 
 ## 任务 C — 读错误归因
 
-`examples/predictions.jsonl` 是一个写死的提取器 `fixture-extractor-v1`，不是在线模型。打开 `examples/scoreboard.md`（没有就用任务开头的命令生成），回答：
+`examples/predictions.jsonl` 是一个写死的提取器 `fixture-extractor-v1`，不是在线模型。打开 `examples/scoreboard.md`（没有就用任务开头的命令生成）。要对照错例的金标值和预测值，可以再跑：
+
+```bash
+fin-qa-eval failures --pred examples/predictions.jsonl
+```
+
+回答：
 
 1. 三个维度里，哪一个最低？
 2. `星澜科技` 和 `澄海乳业` 的主错误为什么是口径，而不是普通算错？
@@ -132,6 +138,8 @@ fin-qa-eval qc --format json
 fin-qa-eval stats
 fin-qa-eval stats --format json
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
+fin-qa-eval failures --pred examples/predictions.jsonl
+fin-qa-eval failures --pred examples/predictions.jsonl --error convention_mismatch
 ```
 
 评分只读本地 JSONL。不要把金标答案写进提示词再拿去测同一套题，那不是这个实验要测的能力。

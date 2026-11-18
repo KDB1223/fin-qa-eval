@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, compare, and stats."""
+"""Command line for validate, qc, grade, report, failures, compare, and stats."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from fin_qa_eval.compare import (
     render_compare_markdown,
     render_compare_text,
 )
+from fin_qa_eval.failures import collect_failures, render_failures_text
 from fin_qa_eval.graders import grade
 from fin_qa_eval.loader import LoadError, load_jsonl
 from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
@@ -31,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Offline eval toolkit for Chinese financial-report QA. "
             "Validates the task schema, runs quality checks, and grades "
             "predictions on numeric accuracy, evidence consistency, and refusal. "
+            "failures inventories items that missed full credit. "
             "compare diffs two prediction files on the same gold set. "
             "stats inventories gold-set coverage without grading."
         ),
@@ -81,6 +83,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Markdown output path (default: stdout)",
     )
     report.set_defaults(func=cmd_report)
+
+    failures_cmd = sub.add_parser(
+        "failures",
+        help="Inventory items that missed full credit",
+    )
+    _add_data_args(failures_cmd, default_data=None)
+    failures_cmd.add_argument(
+        "--pred",
+        type=Path,
+        default=None,
+        help="Prediction JSONL (default: examples/predictions.jsonl)",
+    )
+    failures_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    failures_cmd.add_argument(
+        "--error",
+        default=None,
+        help="Keep failures whose primary_error or errors list contains this tag",
+    )
+    failures_cmd.add_argument(
+        "--company",
+        default=None,
+        help="Keep failures whose company matches exactly",
+    )
+    failures_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Keep the failure with this item id",
+    )
+    failures_cmd.set_defaults(func=cmd_failures)
 
     compare = sub.add_parser(
         "compare",
@@ -248,6 +280,32 @@ def cmd_report(args: argparse.Namespace, stdout: TextIO) -> int:
         print(f"wrote {args.out}", file=stdout)
     else:
         stdout.write(text)
+    return 0
+
+
+def cmd_failures(args: argparse.Namespace, stdout: TextIO) -> int:
+    """List misses. ``--schema`` is accepted and not loaded. Exit 0 even if some items failed."""
+
+    data_file = _gold(args)
+    pred_file = _pred(args)
+    gold_items = load_jsonl(data_file)
+    predictions = load_jsonl(pred_file)
+    graded = grade(gold_items, predictions)
+    payload = collect_failures(
+        graded,
+        gold_items,
+        predictions,
+        gold_name=_display_path(data_file),
+        pred_name=_display_path(pred_file),
+        error=args.error,
+        company=args.company,
+        item_id=args.item_id,
+    )
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_failures_text(payload))
     return 0
 
 
