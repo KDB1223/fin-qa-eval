@@ -26,7 +26,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 
 `fin-qa-eval` is the same console script once it is on `PATH`. `examples/quickstart.sh` runs the same steps and checks that the planted bad file exits 1.
 
-`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `stats` inventories gold-set coverage. `grade` / `report` score a prediction JSONL. Grading does not call a model.
+`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `stats` inventories gold-set coverage. `list-items` lists each gold item. `grade` / `report` score a prediction JSONL. Grading does not call a model.
 
 ## Fixture scoreboard
 
@@ -133,13 +133,18 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval failures --pred FILE` | Inventory printed | — |
 | `fin-qa-eval compare --pred-a A --pred-b B` | Both files graded | With `--fail-on-regression`, candidate overall is lower or any item overall decreases |
 | `fin-qa-eval stats` | Eval file loaded | — |
+| `fin-qa-eval list-items` | Eval file loaded | — |
 
 `grade --format json` and `report` roll scores up by company, period, and metric, and also by 口径 (`scope`, `basis`, `profit_view`, `tax`) and unit. `compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
 
 `failures` lists items with overall below 1, joined to the gold reference and the prediction that was graded (value, unit, and raw answer). Partial credit counts. It is an inventory, not a gate: exit 0 even when there are misses. `--fail-under` stays on `grade`. A load error still exits 2. Filters `--error`, `--company`, and `--id` are ANDed; a filter that matches nothing still exits 0 and prints `no failures`. `--format json` prints summary counts and the failure objects only.
 
+`list-items` inventories each gold item (id, company, period, metric, 口径, unit, and whether it is answerable or a refusal) without grading or reading a prediction file. Filters `--company`, `--metric`, `--period`, `--id`, and `--refusal` are ANDed; a filter that matches nothing still exits 0 and prints `no items`. `--format json` prints the summary and the listed items. A load error exits 2.
+
 ```bash
 fin-qa-eval stats
+fin-qa-eval list-items
+fin-qa-eval list-items --company 星澜科技
 fin-qa-eval qc --data data/fixtures/bad_samples.jsonl   # expected exit 1
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
 fin-qa-eval failures --pred examples/predictions.jsonl
@@ -168,7 +173,8 @@ src/fin_qa_eval/
   failures.py   items that missed full credit, with gold and predicted values
   compare.py    score deltas and primary-error changes between two prediction files
   stats.py      gold-set coverage: companies, 口径, refusal boundaries
-  cli.py        validate, qc, grade, report, failures, compare, stats
+  list_items.py gold-set item inventory: id, 口径, answerable/refusal
+  cli.py        validate, qc, grade, report, failures, compare, stats, list-items
 ```
 
 The report’s checklist is driven by the error tags actually present, split into data fixes and prompt fixes. It is a short list, not a second model.

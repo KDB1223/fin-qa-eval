@@ -90,3 +90,17 @@ def test_stats_command(gold_path) -> None:
     assert main(["stats", "--data", str(gold_path), "--format", "json"], stdout=buf) == 0
     payload = json.loads(buf.getvalue())
     assert payload["n"] == 38
+
+
+def test_list_items_command(gold_path) -> None:
+    buf = io.StringIO()
+    assert main(["list-items", "--data", str(gold_path)], stdout=buf) == 0
+    text = buf.getvalue()
+    assert "items=38" in text
+    assert "listed=38" in text
+
+    buf = io.StringIO()
+    assert main(["list-items", "--data", str(gold_path), "--format", "json"], stdout=buf) == 0
+    payload = json.loads(buf.getvalue())
+    assert payload["summary"]["n"] == 38
+    assert payload["summary"]["n_listed"] == 38

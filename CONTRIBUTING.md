@@ -12,6 +12,8 @@ fin-qa-eval validate && fin-qa-eval qc
 
 `fin-qa-eval stats` prints gold-set coverage (companies, metrics, 口径, refusal reasons) without grading.
 
+`fin-qa-eval list-items` lists each gold item (id, 口径, answerable/refusal) without grading or reading predictions.
+
 `fin-qa-eval failures --pred FILE` lists items that missed full credit, with the gold reference and the prediction that was scored. It exits 0 after a successful inventory, including when every item is full credit (`no failures`). `--fail-under` stays on `grade`.
 
 ## Add an eval item
