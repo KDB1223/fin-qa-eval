@@ -35,6 +35,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `failures` | 列出未满分的题目，带上金标和预测的数值、单位与原始答案 |
 | `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
 | `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
+| `list-items` | 逐条列出金标（id、口径、能否作答和拒答原因），不打分，也不读预测 |
 
 ```bash
 python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
@@ -46,8 +47,12 @@ python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b exam
 
 `failures` 列出综合分不到 1 的题目，并接上金标参考答案和实际参与评分的预测（数值、单位、原始答案）。半分也算错例。它是清单，不是门禁：有错例也退出 0。`--fail-under` 仍在 `grade` 上。读文件失败仍退出 2。`--error`、`--company`、`--id` 同时给出时取交集；筛完没有题目也退出 0，并打印 `no failures`。`--format json` 只输出汇总计数和错例，不倒出满分题。
 
+`list-items` 逐条列出金标（id、公司、期间、指标、口径、单位，以及能否作答或拒答原因），不打分，也不读预测文件。`--company`、`--metric`、`--period`、`--id`、`--refusal` 同时给出时取交集；筛完没有题目也退出 0，并打印 `no items`。`--format json` 输出汇总和列出的题目。读文件失败退出 2。
+
 ```bash
 python3 -m fin_qa_eval stats
+python3 -m fin_qa_eval list-items
+python3 -m fin_qa_eval list-items --company 星澜科技
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl --error convention_mismatch
 ```
@@ -161,7 +166,8 @@ src/fin_qa_eval/
   failures.py         未满分题目，带金标和预测值
   compare.py          两份预测的分数差和主错误变化
   stats.py            金标覆盖：公司、口径、拒答边界
-  cli.py              validate / qc / grade / report / failures / compare / stats
+  list_items.py       金标逐条清单：id、口径、能否作答和拒答原因
+  cli.py              validate / qc / grade / report / failures / compare / stats / list-items
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。

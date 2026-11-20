@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, failures, compare, and stats."""
+"""Command line for validate, qc, grade, report, failures, compare, stats, and list-items."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from fin_qa_eval.compare import (
 )
 from fin_qa_eval.failures import collect_failures, render_failures_text
 from fin_qa_eval.graders import grade
+from fin_qa_eval.list_items import collect_list_items, render_list_items_text
 from fin_qa_eval.loader import LoadError, load_jsonl
 from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
 from fin_qa_eval.qc import run_qc
@@ -34,7 +35,8 @@ def build_parser() -> argparse.ArgumentParser:
             "predictions on numeric accuracy, evidence consistency, and refusal. "
             "failures inventories items that missed full credit. "
             "compare diffs two prediction files on the same gold set. "
-            "stats inventories gold-set coverage without grading."
+            "stats inventories gold-set coverage without grading. "
+            "list-items inventories each gold item without grading."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -152,6 +154,40 @@ def build_parser() -> argparse.ArgumentParser:
     _add_data_args(stats_cmd, default_data=None)
     stats_cmd.add_argument("--format", choices=("text", "json"), default="text")
     stats_cmd.set_defaults(func=cmd_stats)
+
+    list_items_cmd = sub.add_parser(
+        "list-items",
+        help="Inventory each gold item (id, 口径, answerable/refusal)",
+    )
+    _add_data_args(list_items_cmd, default_data=None)
+    list_items_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    list_items_cmd.add_argument(
+        "--company",
+        default=None,
+        help="Keep items whose company matches exactly",
+    )
+    list_items_cmd.add_argument(
+        "--metric",
+        default=None,
+        help="Keep items whose metric matches exactly",
+    )
+    list_items_cmd.add_argument(
+        "--period",
+        default=None,
+        help="Keep items whose report_period matches exactly",
+    )
+    list_items_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Keep the item with this id",
+    )
+    list_items_cmd.add_argument(
+        "--refusal",
+        default=None,
+        help="Keep items whose reference.refusal_reason matches exactly",
+    )
+    list_items_cmd.set_defaults(func=cmd_list_items)
     return parser
 
 
@@ -348,6 +384,27 @@ def cmd_stats(args: argparse.Namespace, stdout: TextIO) -> int:
         stdout.write("\n")
     else:
         stdout.write(render_stats_text(payload))
+    return 0
+
+
+def cmd_list_items(args: argparse.Namespace, stdout: TextIO) -> int:
+    """List gold items. ``--schema`` is accepted and not loaded. Does not grade."""
+
+    data_file = _gold(args)
+    payload = collect_list_items(
+        load_jsonl(data_file),
+        data_name=_display_path(data_file),
+        company=args.company,
+        metric=args.metric,
+        period=args.period,
+        item_id=args.item_id,
+        refusal=args.refusal,
+    )
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_list_items_text(payload))
     return 0
 
 

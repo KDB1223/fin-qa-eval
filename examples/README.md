@@ -26,6 +26,6 @@ fin-qa-eval compare --pred-a examples/predictions.jsonl --pred-b examples/predic
 
 `compare` reports score deltas and primary-error changes. The command above compares the fixture to itself, so the deltas are zero.
 
-`fin-qa-eval failures` lists the rows that missed full credit, including gold versus predicted values. `fin-qa-eval stats` inventories gold-set coverage (companies, 口径, refusal boundaries) and does not grade.
+`fin-qa-eval failures` lists the rows that missed full credit, including gold versus predicted values. `fin-qa-eval stats` inventories gold-set coverage (companies, 口径, refusal boundaries) and does not grade. `fin-qa-eval list-items` lists each gold item and does not grade.
 
 `quickstart.sh` installs the package and runs validate, qc, grade, failures, and report.
