@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, failures, compare, stats, and list-items."""
+"""Command line for validate, qc, grade, report, failures, compare, stats, list-items, and list-distractors."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from fin_qa_eval.compare import (
 )
 from fin_qa_eval.failures import collect_failures, render_failures_text
 from fin_qa_eval.graders import grade
+from fin_qa_eval.list_distractors import collect_list_distractors, render_list_distractors_text
 from fin_qa_eval.list_items import collect_list_items, render_list_items_text
 from fin_qa_eval.loader import LoadError, load_jsonl
 from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
@@ -36,7 +37,8 @@ def build_parser() -> argparse.ArgumentParser:
             "failures inventories items that missed full credit. "
             "compare diffs two prediction files on the same gold set. "
             "stats inventories gold-set coverage without grading. "
-            "list-items inventories each gold item without grading."
+            "list-items inventories each gold item without grading. "
+            "list-distractors inventories 口径 trap figures in distractors[] without grading."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -188,6 +190,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep items whose reference.refusal_reason matches exactly",
     )
     list_items_cmd.set_defaults(func=cmd_list_items)
+
+    list_distractors_cmd = sub.add_parser(
+        "list-distractors",
+        help="Inventory 口径 trap figures in each gold item's distractors",
+    )
+    _add_data_args(list_distractors_cmd, default_data=None)
+    list_distractors_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    list_distractors_cmd.add_argument(
+        "--reason",
+        default=None,
+        help="Keep distractors whose reason matches exactly",
+    )
+    list_distractors_cmd.add_argument(
+        "--company",
+        default=None,
+        help="Keep distractors whose item company matches exactly",
+    )
+    list_distractors_cmd.add_argument(
+        "--metric",
+        default=None,
+        help="Keep distractors whose item metric matches exactly",
+    )
+    list_distractors_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Keep distractors whose item id matches exactly",
+    )
+    list_distractors_cmd.set_defaults(func=cmd_list_distractors)
     return parser
 
 
@@ -405,6 +436,26 @@ def cmd_list_items(args: argparse.Namespace, stdout: TextIO) -> int:
         stdout.write("\n")
     else:
         stdout.write(render_list_items_text(payload))
+    return 0
+
+
+def cmd_list_distractors(args: argparse.Namespace, stdout: TextIO) -> int:
+    """List distractor traps. ``--schema`` is accepted and not loaded. Does not grade."""
+
+    data_file = _gold(args)
+    payload = collect_list_distractors(
+        load_jsonl(data_file),
+        data_name=_display_path(data_file),
+        reason=args.reason,
+        company=args.company,
+        metric=args.metric,
+        item_id=args.item_id,
+    )
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_list_distractors_text(payload))
     return 0
 
 

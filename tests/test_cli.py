@@ -92,6 +92,24 @@ def test_stats_command(gold_path) -> None:
     assert payload["n"] == 38
 
 
+def test_list_distractors_command(gold_path) -> None:
+    buf = io.StringIO()
+    assert main(["list-distractors", "--data", str(gold_path)], stdout=buf) == 0
+    text = buf.getvalue()
+    assert "items=38" in text
+    assert "listed=6" in text
+    assert "with_distractors=6" in text
+    assert "without_distractors=32" in text
+
+    buf = io.StringIO()
+    assert main(["list-distractors", "--data", str(gold_path), "--format", "json"], stdout=buf) == 0
+    payload = json.loads(buf.getvalue())
+    assert payload["summary"]["n"] == 38
+    assert payload["summary"]["n_listed"] == 6
+    assert payload["summary"]["n_with_distractors"] == 6
+    assert payload["by_reason"][0]["key"] == "parent_scope"
+
+
 def test_list_items_command(gold_path) -> None:
     buf = io.StringIO()
     assert main(["list-items", "--data", str(gold_path)], stdout=buf) == 0
