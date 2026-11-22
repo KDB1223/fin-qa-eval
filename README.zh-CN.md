@@ -36,6 +36,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `compare` | 对比两份预测的分数差、提升/退步题目，以及主错误变化 |
 | `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
 | `list-items` | 逐条列出金标（id、口径、能否作答和拒答原因），不打分，也不读预测 |
+| `list-distractors` | 列出 `distractors[]` 里的口径陷阱（原因、数值、单位、原文跨度），不打分，也不读预测 |
 
 ```bash
 python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
@@ -49,10 +50,14 @@ python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b exam
 
 `list-items` 逐条列出金标（id、公司、期间、指标、口径、单位，以及能否作答或拒答原因），不打分，也不读预测文件。`--company`、`--metric`、`--period`、`--id`、`--refusal` 同时给出时取交集；筛完没有题目也退出 0，并打印 `no items`。`--format json` 输出汇总和列出的题目。读文件失败退出 2。
 
+`list-distractors` 按文件顺序逐条列出 `distractors[]` 里的口径陷阱（题目 id、公司、期间、指标、原因、数值、单位、原文跨度），不打分，也不读预测文件。字段缺失、不是数组，或空数组，都不产生行。数组里不是对象的条目会跳过，单靠它不算一条陷阱。`n` 是读入的题目数。`n_with_distractors` 和 `n_without_distractors` 把这些题目分成有陷阱和没有陷阱，筛选不会改变这两个数。`n_listed` 和 `by_reason` 统计筛完后的行；原因按次数从高到低、次数相同再按原因名排序。`--reason`、`--company`、`--metric`、`--id` 同时给出时取交集；筛完没有陷阱也退出 0，并打印 `no distractors`。`--format json` 输出汇总、筛选条件、原因计数和列出的陷阱。读文件失败退出 2。
+
 ```bash
 python3 -m fin_qa_eval stats
 python3 -m fin_qa_eval list-items
 python3 -m fin_qa_eval list-items --company 星澜科技
+python3 -m fin_qa_eval list-distractors
+python3 -m fin_qa_eval list-distractors --reason parent_scope
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl --error convention_mismatch
 ```
@@ -167,7 +172,8 @@ src/fin_qa_eval/
   compare.py          两份预测的分数差和主错误变化
   stats.py            金标覆盖：公司、口径、拒答边界
   list_items.py       金标逐条清单：id、口径、能否作答和拒答原因
-  cli.py              validate / qc / grade / report / failures / compare / stats / list-items
+  list_distractors.py 金标口径陷阱清单：原因、数值、单位、原文跨度
+  cli.py              validate / qc / grade / report / failures / compare / stats / list-items / list-distractors
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。

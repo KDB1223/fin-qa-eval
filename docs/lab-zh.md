@@ -33,11 +33,11 @@ fin-qa-eval grade --pred examples/predictions.jsonl
 fin-qa-eval report --pred examples/predictions.jsonl --out examples/scoreboard.md
 ```
 
-`validate` 只看 JSON Schema。`qc` 额外检查重复、证据是否真的在片段里、单位是否把“18.3亿元”标成了“18.3万元”。`data/fixtures/bad_samples.jsonl` 是故意写坏的，`qc` 应该以退出码 1 结束。`stats` 在打分前清点金标覆盖：公司、指标、期间、单位、口径（scope、basis、profit_view、tax）和拒答原因。它只读评测集，不打分。`list-items` 逐条列出金标（id、口径、能否作答和拒答原因），同样不打分，也不读预测。`failures` 列出未满分的错例，并写出金标值和预测值（例如合并 128.6 对母公司 86.2），比报告里的短表更细。有错例时它仍退出 0。
+`validate` 只看 JSON Schema。`qc` 额外检查重复、证据是否真的在片段里、单位是否把“18.3亿元”标成了“18.3万元”。`data/fixtures/bad_samples.jsonl` 是故意写坏的，`qc` 应该以退出码 1 结束。`stats` 在打分前清点金标覆盖：公司、指标、期间、单位、口径（scope、basis、profit_view、tax）和拒答原因。它只读评测集，不打分。`list-items` 逐条列出金标（id、口径、能否作答和拒答原因），同样不打分，也不读预测。`list-distractors` 列出 `distractors[]` 里的口径陷阱（原因、数值、单位、原文跨度），同样不打分，也不读预测。`failures` 列出未满分的错例，并写出金标值和预测值（例如合并 128.6 对母公司 86.2），比报告里的短表更细。有错例时它仍退出 0。
 
 ## 任务 A — 读一条样本
 
-`fin-qa-eval list-items` 可以先按 id 浏览题目（公司、期间、口径、能否作答），不必打开 JSONL。下面仍要打开原文，对照证据和干扰项。
+`fin-qa-eval list-items` 可以先按 id 浏览题目（公司、期间、口径、能否作答），`fin-qa-eval list-distractors` 列出干扰项的原因和数值。下面仍要打开原文，对照证据和干扰项。
 
 打开 `data/samples/eval_set.jsonl`，找到 `xlkj-2024q3-revenue`。对照着写：
 
@@ -141,6 +141,8 @@ fin-qa-eval stats
 fin-qa-eval stats --format json
 fin-qa-eval list-items
 fin-qa-eval list-items --format json
+fin-qa-eval list-distractors
+fin-qa-eval list-distractors --reason parent_scope
 fin-qa-eval grade --pred examples/predictions.jsonl --format json
 fin-qa-eval failures --pred examples/predictions.jsonl
 fin-qa-eval failures --pred examples/predictions.jsonl --error convention_mismatch
