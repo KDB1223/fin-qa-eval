@@ -16,6 +16,8 @@ fin-qa-eval validate && fin-qa-eval qc
 
 `fin-qa-eval list-distractors` lists 口径 trap figures in each item's `distractors[]` (reason, value, unit, span) without grading or reading predictions.
 
+`fin-qa-eval list-predictions --pred FILE` inventories that prediction file against the gold set (coverage, unknown ids, duplicates, refusals) without grading or writing a score.
+
 `fin-qa-eval failures --pred FILE` lists items that missed full credit, with the gold reference and the prediction that was scored. It exits 0 after a successful inventory, including when every item is full credit (`no failures`). `--fail-under` stays on `grade`.
 
 ## Add an eval item

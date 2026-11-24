@@ -122,3 +122,37 @@ def test_list_items_command(gold_path) -> None:
     payload = json.loads(buf.getvalue())
     assert payload["summary"]["n"] == 38
     assert payload["summary"]["n_listed"] == 38
+
+
+def test_list_predictions_command(gold_path, pred_path) -> None:
+    buf = io.StringIO()
+    assert main(
+        ["list-predictions", "--data", str(gold_path), "--pred", str(pred_path)],
+        stdout=buf,
+    ) == 0
+    text = buf.getvalue()
+    assert "gold=38" in text
+    assert "pred=38" in text
+    assert "listed=38" in text
+    assert "covered=38" in text
+    assert "missing_gold=0" in text
+
+    buf = io.StringIO()
+    assert main(
+        [
+            "list-predictions",
+            "--data",
+            str(gold_path),
+            "--pred",
+            str(pred_path),
+            "--format",
+            "json",
+        ],
+        stdout=buf,
+    ) == 0
+    payload = json.loads(buf.getvalue())
+    assert payload["summary"]["n_gold"] == 38
+    assert payload["summary"]["n_pred"] == 38
+    assert payload["summary"]["n_gold_covered"] == 38
+    assert payload["summary"]["n_gold_missing"] == 0
+    assert payload["missing_gold"] == []
