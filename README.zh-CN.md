@@ -37,6 +37,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 | `stats` | 清点金标覆盖（公司、指标、期间、单位、口径、拒答边界），不打分 |
 | `list-items` | 逐条列出金标（id、口径、能否作答和拒答原因），不打分，也不读预测 |
 | `list-distractors` | 列出 `distractors[]` 里的口径陷阱（原因、数值、单位、原文跨度），不打分，也不读预测 |
+| `list-predictions` | 对照金标清点预测文件的覆盖、未知 id、重复 id 和拒答，不打分 |
 
 ```bash
 python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b examples/predictions.jsonl
@@ -52,12 +53,16 @@ python3 -m fin_qa_eval compare --pred-a examples/predictions.jsonl --pred-b exam
 
 `list-distractors` 按文件顺序逐条列出 `distractors[]` 里的口径陷阱（题目 id、公司、期间、指标、原因、数值、单位、原文跨度），不打分，也不读预测文件。字段缺失、不是数组，或空数组，都不产生行。数组里不是对象的条目会跳过，单靠它不算一条陷阱。`n` 是读入的题目数。`n_with_distractors` 和 `n_without_distractors` 把这些题目分成有陷阱和没有陷阱，筛选不会改变这两个数。`n_listed` 和 `by_reason` 统计筛完后的行；原因按次数从高到低、次数相同再按原因名排序。`--reason`、`--company`、`--metric`、`--id` 同时给出时取交集；筛完没有陷阱也退出 0，并打印 `no distractors`。`--format json` 输出汇总、筛选条件、原因计数和列出的陷阱。读文件失败退出 2。
 
+`list-predictions` 把预测 JSONL 对照金标做覆盖清单，不打分。它不调用模型，不写文件，也不跑评分器，分数不变。预测行按文件顺序全部保留，包括没有 id 的行和重复 id。`grade` 会丢掉没有可用 id 的行，同一个 id 只留最后一行；这条命令每一行都列出，只把后出现的标成重复。可用 id 是非空字符串。`in_gold` 仅当这个 id 出现在金标上。`unknown` 是有可用 id、但不在金标里。`missing_gold` 按金标文件顺序列出没有任何可用预测的金标 id，行筛选不会把它藏起来。`n_gold`、`n_pred`、`n_gold_covered`、`n_gold_missing`、`n_missing_id`、`n_unknown`、`n_duplicate` 统计读入的文件。`n_listed`、`n_refused`、`n_with_value`、`n_with_evidence`、`n_in_gold` 统计筛完后的行。拒答直接用评分器里的 `prediction_refused`，不另写规则。`--id`、`--company`、`--kind`（`in_gold`、`unknown`、`missing_id`、`duplicate`、`refused`）同时给出时取交集。筛完没有行也退出 0，并打印 `no predictions`。清单成功就退出 0，空预测文件、未知 id 或重复 id 也一样。`--fail-under` 仍在 `grade` 上。读文件失败退出 2。`--format json` 输出汇总、筛选条件、缺预测的金标 id 和列出的行。
+
 ```bash
 python3 -m fin_qa_eval stats
 python3 -m fin_qa_eval list-items
 python3 -m fin_qa_eval list-items --company 星澜科技
 python3 -m fin_qa_eval list-distractors
 python3 -m fin_qa_eval list-distractors --reason parent_scope
+python3 -m fin_qa_eval list-predictions --pred examples/predictions.jsonl
+python3 -m fin_qa_eval list-predictions --pred examples/predictions.jsonl --kind unknown
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl
 python3 -m fin_qa_eval failures --pred examples/predictions.jsonl --error convention_mismatch
 ```
@@ -173,14 +178,15 @@ src/fin_qa_eval/
   stats.py            金标覆盖：公司、口径、拒答边界
   list_items.py       金标逐条清单：id、口径、能否作答和拒答原因
   list_distractors.py 金标口径陷阱清单：原因、数值、单位、原文跨度
-  cli.py              validate / qc / grade / report / failures / compare / stats / list-items / list-distractors
+  list_predictions.py 预测覆盖清单：是否在金标中、未知 id、重复 id、拒答
+  cli.py              validate / qc / grade / report / failures / compare / stats / list-items / list-distractors / list-predictions
 ```
 
 报告末尾的改进清单按本次出现的错误类型生成，分成「数据」和「提示词」两节。例如单位错误会要求提示词写出「1亿元 = 10,000万元 = 100百万元」。
 
 ## 测试
 
-GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`stats`、`grade`、`failures`，并检查坏样本的退出码是 1。CI 不需要密钥。
+GitHub Actions 在 Python 3.10、3.11、3.12 上跑 `pytest`，再跑 `validate`、`qc`、`stats`、`grade`、`failures`、`list-predictions`，并检查坏样本的退出码是 1。CI 不需要密钥。
 
 ```bash
 pytest

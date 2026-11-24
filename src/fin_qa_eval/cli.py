@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, failures, compare, stats, list-items, and list-distractors."""
+"""Command line for validate, qc, grade, report, failures, compare, stats, list-items, list-distractors, and list-predictions."""
 
 from __future__ import annotations
 
@@ -19,6 +19,11 @@ from fin_qa_eval.failures import collect_failures, render_failures_text
 from fin_qa_eval.graders import grade
 from fin_qa_eval.list_distractors import collect_list_distractors, render_list_distractors_text
 from fin_qa_eval.list_items import collect_list_items, render_list_items_text
+from fin_qa_eval.list_predictions import (
+    KINDS,
+    collect_list_predictions,
+    render_list_predictions_text,
+)
 from fin_qa_eval.loader import LoadError, load_jsonl
 from fin_qa_eval.paths import demo_predictions_path, gold_path, schema_path
 from fin_qa_eval.qc import run_qc
@@ -38,7 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
             "compare diffs two prediction files on the same gold set. "
             "stats inventories gold-set coverage without grading. "
             "list-items inventories each gold item without grading. "
-            "list-distractors inventories 口径 trap figures in distractors[] without grading."
+            "list-distractors inventories 口径 trap figures in distractors[] without grading. "
+            "list-predictions inventories a prediction file against the gold set without grading."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -219,6 +225,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep distractors whose item id matches exactly",
     )
     list_distractors_cmd.set_defaults(func=cmd_list_distractors)
+
+    list_predictions_cmd = sub.add_parser(
+        "list-predictions",
+        help="Inventory prediction coverage, unknown ids, duplicates, and refusals",
+    )
+    _add_data_args(list_predictions_cmd, default_data=None)
+    list_predictions_cmd.add_argument(
+        "--pred",
+        type=Path,
+        default=None,
+        help="Prediction JSONL (default: examples/predictions.jsonl)",
+    )
+    list_predictions_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    list_predictions_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Keep predictions whose id matches exactly",
+    )
+    list_predictions_cmd.add_argument(
+        "--company",
+        default=None,
+        help="Keep predictions whose gold company matches exactly",
+    )
+    list_predictions_cmd.add_argument(
+        "--kind",
+        choices=KINDS,
+        default=None,
+        help="Keep predictions of this kind: in_gold, unknown, missing_id, duplicate, or refused",
+    )
+    list_predictions_cmd.set_defaults(func=cmd_list_predictions)
     return parser
 
 
@@ -456,6 +493,32 @@ def cmd_list_distractors(args: argparse.Namespace, stdout: TextIO) -> int:
         stdout.write("\n")
     else:
         stdout.write(render_list_distractors_text(payload))
+    return 0
+
+
+def cmd_list_predictions(args: argparse.Namespace, stdout: TextIO) -> int:
+    """Inventory prediction coverage. ``--schema`` is accepted and not loaded.
+
+    Does not grade and does not write. Exit 0 after a successful inventory,
+    including an empty prediction file or filters that match nothing.
+    """
+
+    data_file = _gold(args)
+    pred_file = _pred(args)
+    payload = collect_list_predictions(
+        load_jsonl(data_file),
+        load_jsonl(pred_file),
+        data_name=_display_path(data_file),
+        pred_name=_display_path(pred_file),
+        item_id=args.item_id,
+        company=args.company,
+        kind=args.kind,
+    )
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_list_predictions_text(payload))
     return 0
 
 
