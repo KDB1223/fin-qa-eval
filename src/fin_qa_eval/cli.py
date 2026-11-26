@@ -1,4 +1,4 @@
-"""Command line for validate, qc, grade, report, failures, compare, stats, list-items, list-distractors, and list-predictions."""
+"""Command line for validate, qc, grade, report, failures, compare, stats, list-items, list-distractors, list-predictions, and list-evidence."""
 
 from __future__ import annotations
 
@@ -18,6 +18,11 @@ from fin_qa_eval.compare import (
 from fin_qa_eval.failures import collect_failures, render_failures_text
 from fin_qa_eval.graders import grade
 from fin_qa_eval.list_distractors import collect_list_distractors, render_list_distractors_text
+from fin_qa_eval.list_evidence import (
+    KINDS as EVIDENCE_KINDS,
+    collect_list_evidence,
+    render_list_evidence_text,
+)
 from fin_qa_eval.list_items import collect_list_items, render_list_items_text
 from fin_qa_eval.list_predictions import (
     KINDS,
@@ -44,7 +49,8 @@ def build_parser() -> argparse.ArgumentParser:
             "stats inventories gold-set coverage without grading. "
             "list-items inventories each gold item without grading. "
             "list-distractors inventories 口径 trap figures in distractors[] without grading. "
-            "list-predictions inventories a prediction file against the gold set without grading."
+            "list-predictions inventories a prediction file against the gold set without grading. "
+            "list-evidence inventories each gold item's evidence span and source binding without grading."
         ),
     )
     parser.add_argument("--version", action="version", version=f"fin-qa-eval {__version__}")
@@ -256,6 +262,49 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep predictions of this kind: in_gold, unknown, missing_id, duplicate, or refused",
     )
     list_predictions_cmd.set_defaults(func=cmd_list_predictions)
+
+    list_evidence_cmd = sub.add_parser(
+        "list-evidence",
+        help="Inventory each gold item's evidence span and source binding",
+    )
+    _add_data_args(list_evidence_cmd, default_data=None)
+    list_evidence_cmd.add_argument("--format", choices=("text", "json"), default="text")
+    list_evidence_cmd.add_argument(
+        "--company",
+        default=None,
+        help="Keep items whose company matches exactly",
+    )
+    list_evidence_cmd.add_argument(
+        "--metric",
+        default=None,
+        help="Keep items whose metric matches exactly",
+    )
+    list_evidence_cmd.add_argument(
+        "--period",
+        default=None,
+        help="Keep items whose report_period matches exactly",
+    )
+    list_evidence_cmd.add_argument(
+        "--id",
+        dest="item_id",
+        default=None,
+        help="Keep the item with this id",
+    )
+    list_evidence_cmd.add_argument(
+        "--source",
+        default=None,
+        help="Keep items whose source_id matches exactly",
+    )
+    list_evidence_cmd.add_argument(
+        "--kind",
+        choices=EVIDENCE_KINDS,
+        default=None,
+        help=(
+            "Keep items of this kind: with_evidence, missing_evidence, "
+            "contained, or not_contained"
+        ),
+    )
+    list_evidence_cmd.set_defaults(func=cmd_list_evidence)
     return parser
 
 
@@ -519,6 +568,33 @@ def cmd_list_predictions(args: argparse.Namespace, stdout: TextIO) -> int:
         stdout.write("\n")
     else:
         stdout.write(render_list_predictions_text(payload))
+    return 0
+
+
+def cmd_list_evidence(args: argparse.Namespace, stdout: TextIO) -> int:
+    """List evidence bindings. ``--schema`` is accepted and not loaded.
+
+    Does not grade and does not read a prediction file. Exit 0 after a
+    successful inventory, including missing spans, spans that are not
+    contained, and filters that match nothing.
+    """
+
+    data_file = _gold(args)
+    payload = collect_list_evidence(
+        load_jsonl(data_file),
+        data_name=_display_path(data_file),
+        company=args.company,
+        metric=args.metric,
+        period=args.period,
+        item_id=args.item_id,
+        source=args.source,
+        kind=args.kind,
+    )
+    if args.format == "json":
+        json.dump(payload, stdout, ensure_ascii=False, indent=2)
+        stdout.write("\n")
+    else:
+        stdout.write(render_list_evidence_text(payload))
     return 0
 
 

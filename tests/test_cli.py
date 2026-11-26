@@ -124,6 +124,34 @@ def test_list_items_command(gold_path) -> None:
     assert payload["summary"]["n_listed"] == 38
 
 
+def test_list_evidence_command(gold_path) -> None:
+    buf = io.StringIO()
+    assert main(["list-evidence", "--data", str(gold_path)], stdout=buf) == 0
+    text = buf.getvalue()
+    assert "items=38" in text
+    assert "listed=38" in text
+    assert "with_evidence=38" in text
+    assert "without_evidence=0" in text
+    assert "contained=38" in text
+    assert "not_contained=0" in text
+    assert "sources=8" in text
+    assert "src-bcyy-2024fy n=8" in text
+    assert "【虚构示例" not in text
+
+    buf = io.StringIO()
+    assert main(["list-evidence", "--data", str(gold_path), "--format", "json"], stdout=buf) == 0
+    payload = json.loads(buf.getvalue())
+    assert payload["summary"]["n"] == 38
+    assert payload["summary"]["n_listed"] == 38
+    assert payload["summary"]["n_with_evidence"] == 38
+    assert payload["summary"]["n_contained"] == 38
+    assert payload["summary"]["n_not_contained"] == 0
+    assert payload["summary"]["n_sources"] == 8
+    assert payload["by_source"][0] == {"key": "src-bcyy-2024fy", "n": 8}
+    assert len(payload["by_source"]) == 8
+    assert len(payload["items"]) == 38
+
+
 def test_list_predictions_command(gold_path, pred_path) -> None:
     buf = io.StringIO()
     assert main(
