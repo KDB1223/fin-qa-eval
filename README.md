@@ -26,7 +26,7 @@ python3 -m fin_qa_eval report --pred examples/predictions.jsonl --out examples/s
 
 `fin-qa-eval` is the same console script once it is on `PATH`. `examples/quickstart.sh` runs the same steps and checks that the planted bad file exits 1.
 
-`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `stats` inventories gold-set coverage. `list-items` lists each gold item. `list-distractors` lists the 口径 trap figures in `distractors[]`. `list-predictions` checks whether a prediction file covers the gold set before grading. `grade` / `report` score a prediction JSONL. Grading does not call a model.
+`validate` checks the JSON Schema. `qc` adds duplicate detection, evidence containment, and unit anomalies. `stats` inventories gold-set coverage. `list-items` lists each gold item. `list-distractors` lists the 口径 trap figures in `distractors[]`. `list-evidence` lists each gold item's evidence span and source binding. `list-predictions` checks whether a prediction file covers the gold set before grading. `grade` / `report` score a prediction JSONL. Grading does not call a model.
 
 ## Fixture scoreboard
 
@@ -135,6 +135,7 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 | `fin-qa-eval stats` | Eval file loaded | — |
 | `fin-qa-eval list-items` | Eval file loaded | — |
 | `fin-qa-eval list-distractors` | Eval file loaded | — |
+| `fin-qa-eval list-evidence` | Eval file loaded | — |
 | `fin-qa-eval list-predictions --pred FILE` | Inventory printed | — |
 
 `grade --format json` and `report` roll scores up by company, period, and metric, and also by 口径 (`scope`, `basis`, `profit_view`, `tax`) and unit. `compare` grades both prediction files offline and reports B-A score deltas, which items improved or regressed, and how primary errors moved. `stats` is an inventory of the gold set, not a grade: companies, metrics, periods, units, 口径 (`scope`, `basis`, `profit_view`, `tax`), language, and refusal boundaries. It does not read a prediction file.
@@ -145,6 +146,8 @@ Tolerances: money matches within 0.1% or 1 CNY after conversion to yuan; YoY mat
 
 `list-distractors` inventories each 口径 trap in `distractors[]` (item id, company, period, metric, reason, value, unit, and span) without grading or reading a prediction file. Items are walked in file order, and each distractor object is one row. A missing field, a non-list, or an empty list adds no rows. A non-object entry is skipped and does not by itself count as a trap. `n` is the loaded item count. `n_with_distractors` and `n_without_distractors` partition those loaded items and stay put when filters are applied. `n_listed` and `by_reason` describe the rows that remain; reason counts are sorted by count descending, then reason ascending. Filters `--reason`, `--company`, `--metric`, and `--id` are ANDed exact matches; a filter that matches nothing still exits 0 and prints `no distractors`. `--format json` prints the summary, filters, reason counts, and the listed distractors. A load error exits 2.
 
+`list-evidence` inventories each gold item's evidence binding (source id, evidence span, and whether that span is contained in `source_text`) without grading or reading a prediction file. It does not print `source_text`. Items are walked in file order, one row per item, including a missing or empty evidence span. Containment reuses `evidence_contained` from `qc`: a missing or non-string field is treated as `""`, and an empty span is not contained. `n` is the loaded item count. `n_listed`, `n_with_evidence`, `n_without_evidence`, `n_contained`, `n_not_contained`, and `n_sources` describe the rows that remain. `n_with_evidence` and `n_without_evidence` partition the listed rows, and so do `n_contained` and `n_not_contained`. `n_sources` counts distinct non-empty `source_id` values. `by_source` counts those rows by source id, sorted by count descending, then key ascending; a missing source id is JSON `null`. Filters `--company`, `--metric`, `--period`, `--id`, `--source`, and `--kind` (`with_evidence`, `missing_evidence`, `contained`, `not_contained`) are ANDed exact matches. `not_contained` is a non-empty span that fails containment; an empty or missing span is `missing_evidence`. A filter that matches nothing still exits 0 and prints `no items`. This is an inventory, not a gate: missing or uncontained spans still exit 0. `qc` remains the gate. A load error exits 2. `--format json` prints the summary, filters, source counts, and the listed items. `--schema` is accepted and not used.
+
 `list-predictions` inventories a prediction JSONL against the gold set without grading. It does not call a model, write a file, or run the graders, and it does not change scores. Prediction rows stay in file order, including a missing id and a repeated id. `grade` drops a row with no usable id and keeps the last row for a duplicate id; this command lists every row and flags only the later copies. A usable id is a non-empty string. `in_gold` is true only when that id is on a gold item. `unknown` is a usable id that is not in the gold set. `missing_gold` lists gold ids with no usable prediction, in gold file order, and row filters do not hide it. `n_gold`, `n_pred`, `n_gold_covered`, `n_gold_missing`, `n_missing_id`, `n_unknown`, and `n_duplicate` describe the loaded files. `n_listed`, `n_refused`, `n_with_value`, `n_with_evidence`, and `n_in_gold` describe the rows that remain. Refusal uses the grader's `prediction_refused` check. Filters `--id`, `--company`, and `--kind` (`in_gold`, `unknown`, `missing_id`, `duplicate`, `refused`) are ANDed exact matches. A filter that matches nothing still exits 0 and prints `no predictions`. Exit 0 after a successful inventory, including an empty prediction file, unknown ids, or duplicates. `--fail-under` stays on `grade`. A load error exits 2. `--format json` prints the summary, filters, missing gold ids, and the listed rows.
 
 ```bash
@@ -153,6 +156,9 @@ fin-qa-eval list-items
 fin-qa-eval list-items --company 星澜科技
 fin-qa-eval list-distractors
 fin-qa-eval list-distractors --reason parent_scope
+fin-qa-eval list-evidence
+fin-qa-eval list-evidence --source src-xlkj-2024q3
+fin-qa-eval list-evidence --kind not_contained
 fin-qa-eval list-predictions --pred examples/predictions.jsonl
 fin-qa-eval list-predictions --pred examples/predictions.jsonl --kind unknown
 fin-qa-eval qc --data data/fixtures/bad_samples.jsonl   # expected exit 1
@@ -185,15 +191,16 @@ src/fin_qa_eval/
   stats.py      gold-set coverage: companies, 口径, refusal boundaries
   list_items.py gold-set item inventory: id, 口径, answerable/refusal
   list_distractors.py gold-set 口径 trap inventory: reason, value, unit, span
+  list_evidence.py gold-set evidence inventory: source id, span, containment
   list_predictions.py prediction coverage: in-gold, unknown, duplicate, refusal
-  cli.py        validate, qc, grade, report, failures, compare, stats, list-items, list-distractors, list-predictions
+  cli.py        validate, qc, grade, report, failures, compare, stats, list-items, list-distractors, list-evidence, list-predictions
 ```
 
 The report’s checklist is driven by the error tags actually present, split into data fixes and prompt fixes. It is a short list, not a second model.
 
 ## Tests
 
-GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `stats`, `grade`, `failures`, and `list-predictions`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
+GitHub Actions runs pytest on Python 3.10, 3.11, and 3.12, then `validate`, `qc`, `stats`, `list-evidence`, `grade`, `failures`, and `list-predictions`, and asserts that the bad fixture still fails QC. Nothing in CI needs a key.
 
 ```bash
 pytest

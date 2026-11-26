@@ -27,6 +27,8 @@ jobs:
           fin-qa-eval qc
       - name: Inventory the shipped eval set
         run: fin-qa-eval stats
+      - name: Inventory evidence bindings in the shipped eval set
+        run: fin-qa-eval list-evidence
       - name: Grade the fixture predictions
         run: fin-qa-eval grade --pred examples/predictions.jsonl
       - name: Inventory failures in the fixture predictions
